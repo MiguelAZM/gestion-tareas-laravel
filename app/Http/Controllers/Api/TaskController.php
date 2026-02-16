@@ -7,6 +7,9 @@ use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
 use App\Models\Task;
 use Illuminate\Http\Request;
+use App\Notifications\TaskCreatedNotification;
+use App\Notifications\TaskCompletedNotification;
+
 
 class TaskController extends Controller
 {
@@ -15,10 +18,15 @@ class TaskController extends Controller
      */
     public function index(Request $request)
     {
-        $tasks = $request->user()
-            ->tasks()
-            ->orderBy('expiration_date', 'asc')
-            ->paginate(10);
+        $query = $request->user()->tasks();
+
+        $query->orderBy(
+                $request->get('sort_by', 'expiration_date'),
+                $request->get('order', 'asc')
+            );
+
+            $tasks = $query->paginate(10);
+
 
         return response()->json($tasks);
     }
@@ -29,8 +37,10 @@ class TaskController extends Controller
     public function store(StoreTaskRequest $request)
     {
         $task = $request->user()->tasks()->create(
-            $request->validated()
-        );
+            $request->validated());
+
+        $request->user()->notify(
+            new TaskCreatedNotification($task));
 
         return response()->json($task, 201);
     }
@@ -70,6 +80,22 @@ class TaskController extends Controller
             'message' => 'Tarea eliminada'
         ]);
     }
+
+
+    //marcar tarea completada
+    public function markCompleted   (Task $task)
+    {
+        $this->authorizeTask($task);
+
+        $task->update([
+            'completed' => true]);
+
+        $task->user->notify(
+            new TaskCompletedNotification($task));
+
+        return response()->json($task);
+    }
+
     // solo el dueño puede acceder
     private function authorizeTask(Task $task)
     {
