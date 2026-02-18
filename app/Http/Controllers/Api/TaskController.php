@@ -83,18 +83,17 @@ class TaskController extends Controller
 
 
     //marcar tarea completada
-    public function markCompleted   (Task $task)
-    {
+    public function markCompleted(Request $request, Task $task) {
         $this->authorizeTask($task);
-
         $task->update([
-            'completed' => true]);
-
-        $task->user->notify(
-            new TaskCompletedNotification($task));
-
-        return response()->json($task);
-    }
+            'completed' => true,
+            'justification' => $request->input('justification')
+        ]);
+        if ($task->user) {
+            $task->user->notify(new TaskCompletedNotification($task)
+            );
+        }
+        return response()->json($task); }
 
     // solo el dueño puede acceder
     private function authorizeTask(Task $task)

@@ -13,7 +13,8 @@ class Task extends Model
         'title',
         'description',
         'expiration_date',
-        'completed'
+        'completed',
+        'justification'
     ];
     protected $casts = [
         'is_completed' => 'boolean',
